@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgroSense – Weather-Based Crop Advisory</title>
+<style>
+  /* ── Token System ─────────────────────────────────────── */
+  :root {
+    --soil:    #2C1A0E;
+    --bark:    #5C3D1E;
+    --clay:    #A0522D;
+    --straw:   #D4A84B;
+    --leaf:    #3A7D44;
+    --sage:    #8FBC8F;
+    --sky:     #87CEEB;
+    --mist:    #F0F7EE;
+    --cloud:   #FAFCF8;
+    --rain:    #4A90D9;
+    --sun:     #F5C518;
+    --heat:    #E8612C;
+    --frost:   #89CFF0;
+
+--font-display: 'Georgia', 'Times New Roman', serif;
+--font-body:    system-ui, 'Segoe UI', sans-serif;
+--font-data:    'Courier New', monospace;
+
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {background: var(--cloud);color: var(--soil);font-family: var(--font-body);font-size: 16px;line-height: 1.6;min-height: 100vh;}
+
+/* ── Header ───────────────────────────────────────────── */header {background: linear-gradient(135deg, var(--leaf) 0%, var(--soil) 100%);color: var(--mist);padding: 0;position: sticky;top: 0;z-index: 100;box-shadow: 0 2px 16px rgba(44,26,14,0.3);}.header-inner {max-width: 1200px;margin: 0 auto;padding: 14px 24px;display: flex;align-items: center;justify-content: space-between;}.logo {display: flex;align-items: center;gap: 10px;}.logo-icon {width: 38px; height: 38px;background: var(--straw);border-radius: 50%;display: flex; align-items: center; justify-content: center;font-size: 20px;flex-shrink: 0;}.logo-text {font-family: var(--font-display);font-size: 1.5rem;letter-spacing: 0.5px;}.logo-text span { color: var(--straw); }.tagline {font-size: 0.75rem;opacity: 0.7;letter-spacing: 1.5px;text-transform: uppercase;}nav a {color: var(--mist);text-decoration: none;margin-left: 20px;font-size: 0.88rem;opacity: 0.85;transition: opacity 0.2s;}nav a { opacity: 1; text-decoration: underline; }
+
+/* ── Hero ─────────────────────────────────────────────── */.hero {background: linear-gradient(160deg, #1a3a24 0%, #2C5016 40%, #4a7a2a 100%);color: var(--mist);padding: 60px 24px 48px;text-align: center;position: relative;overflow: hidden;}.hero::before {content: '';position: absolute;inset: 0;background: url("data/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");}.hero h1 {font-family: var(--font-display);font-size: clamp(2rem, 5vw, 3.5rem);font-weight: 400;line-height: 1.15;max-width: 700px;margin: 0 auto 12px;}.hero h1 em { font-style: normal; color: var(--straw); }.hero p {max-width: 520px;margin: 0 auto 32px;opacity: 0.8;font-size: 1.05rem;}
+
+/* ── Weather Input Card ───────────────────────────────── */.input-card {background: rgba(255,255,255,0.07);backdrop-filter: blur(6px);border: 1px solid rgba(255,255,255,0.15);border-radius: 16px;padding: 28px 32px;max-width: 700px;margin: 0 auto;}.input-grid {display: grid;grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));gap: 16px;margin-bottom: 18px;}.field label {display: block;font-size: 0.72rem;letter-spacing: 1.2px;text-transform: uppercase;opacity: 0.65;margin-bottom: 5px;}.field input, .field select {width: 100%;padding: 9px 12px;border-radius: 8px;border: 1.5px solid rgba(255,255,255,0.2);background: rgba(255,255,255,0.1);color: var(--mist);font-family: var(--font-data);font-size: 1rem;outline: none;transition: border-color 0.2s;}.field input, .field select {border-color: var(--straw);background: rgba(255,255,255,0.15);}.field select option { background: var(--soil); color: var(--mist); }.btn-primary {width: 100%;padding: 12px;background: var(--straw);color: var(--soil);border: none;border-radius: 10px;font-size: 1rem;font-weight: 700;cursor: pointer;letter-spacing: 0.5px;transition: background 0.2s, transform 0.1s;}.btn-primary { background: #e8ba3e; }.btn-primary { transform: scale(0.98); }
+
+/* ── Main Content ─────────────────────────────────────── */main {max-width: 1200px;margin: 0 auto;padding: 40px 24px 60px;}
+
+/* ── Weather Strip ────────────────────────────────────── */#weather-strip {display: none;grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));gap: 12px;margin-bottom: 36px;animation: fadeUp 0.5s ease;}.weather-tile {background: white;border-radius: 12px;padding: 16px 12px;text-align: center;box-shadow: 0 2px 8px rgba(44,26,14,0.08);border-top: 3px solid var(--leaf);}.weather-tile .w-icon { font-size: 2rem; }.weather-tile .w-val {font-family: var(--font-data);font-size: 1.3rem;font-weight: bold;color: var(--soil);line-height: 1;margin: 6px 0 2px;}.weather-tile .w-label {font-size: 0.72rem;letter-spacing: 1px;text-transform: uppercase;color: var(--bark);opacity: 0.7;}
+
+/* ── Advisory Section ─────────────────────────────────── */#advisory-section {display: none;animation: fadeUp 0.6s ease;}.section-eyebrow {font-size: 0.75rem;letter-spacing: 2px;text-transform: uppercase;color: var(--clay);margin-bottom: 6px;}.section-title {font-family: var(--font-display);font-size: 1.7rem;font-weight: 400;color: var(--soil);margin-bottom: 24px;}.advisory-grid {display: grid;grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));gap: 20px;}.advisory-card {background: white;border-radius: 14px;overflow: hidden;box-shadow: 0 3px 12px rgba(44,26,14,0.09);transition: transform 0.2s, box-shadow 0.2s;}.advisory-card {transform: translateY(-3px);box-shadow: 0 8px 24px rgba(44,26,14,0.13);}.card-header {padding: 18px 20px 14px;display: flex;align-items: center;gap: 12px;border-bottom: 1px solid #f0ede8;}.crop-badge {width: 44px; height: 44px;border-radius: 10px;display: flex; align-items: center; justify-content: center;font-size: 22px;flex-shrink: 0;}.card-header h3 {font-family: var(--font-display);font-size: 1.1rem;font-weight: 600;}.suitability-bar-wrap {display: flex; align-items: center; gap: 8px; margin-top: 4px;}.suitability-bar {flex: 1;height: 5px;background: #ece7df;border-radius: 99px;overflow: hidden;}.suitability-fill {height: 100%;border-radius: 99px;transition: width 0.8s cubic-bezier(.4,0,.2,1);}.suit-val {font-family: var(--font-data);font-size: 0.78rem;font-weight: bold;min-width: 34px;text-align: right;}.card-body { padding: 16px 20px 18px; }.advisory-points { list-style: none; }.advisory-points li {padding: 5px 0;font-size: 0.88rem;color: #3a3028;display: flex;gap: 8px;align-items: flex-start;border-bottom: 1px solid #f5f2ee;}.advisory-points li { border-bottom: none; }.advisory-points li .dot {width: 6px; height: 6px;border-radius: 50%;margin-top: 7px;flex-shrink: 0;}
+
+/* ── Alert Banner ─────────────────────────────────────── */.alert-banner {border-radius: 10px;padding: 14px 18px;margin-bottom: 28px;display: flex;align-items: flex-start;gap: 12px;font-size: 0.92rem;}.alert-banner.warn { background: #FFF8E1; border-left: 4px solid var(--straw); color: #5a4a00; }.alert-banner.danger { background: #FFF0EC; border-left: 4px solid var(--heat); color: #6a1500; }.alert-banner.good { background: #F0FFF4; border-left: 4px solid var(--leaf); color: #0a3a1a; }.alert-banner .alert-icon { font-size: 1.3rem; flex-shrink: 0; }
+
+/* ── Tip Strip ────────────────────────────────────────── */.tip-strip {display: grid;grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));gap: 14px;margin-top: 32px;}.tip-tile {background: linear-gradient(135deg, var(--mist), white);border: 1px solid #dfebd8;border-radius: 12px;padding: 16px 18px;display: flex;gap: 12px;align-items: flex-start;}.tip-tile .tip-icon { font-size: 1.6rem; flex-shrink: 0; }.tip-tile h4 { font-size: 0.88rem; font-weight: 700; margin-bottom: 3px; color: var(--bark); }.tip-tile p { font-size: 0.82rem; color: #5a4a3a; line-height: 1.5; }
+
+/* ── Empty State ──────────────────────────────────────── */#empty-state {text-align: center;padding: 60px 24px;color: var(--bark);opacity: 0.6;}#empty-state .es-icon { font-size: 4rem; margin-bottom: 16px; }#empty-state p { font-size: 1rem; max-width: 320px; margin: 0 auto; }
+
+/* ── Footer ───────────────────────────────────────────── */footer {background: var(--soil);color: rgba(240,247,238,0.6);text-align: center;padding: 20px;font-size: 0.82rem;}footer strong { color: var(--straw); }
+
+/* ── Animations ───────────────────────────────────────── */@keyframes fadeUp {from { opacity: 0; transform: translateY(18px); }to   { opacity: 1; transform: translateY(0); }}
+
+/* ── Responsive ───────────────────────────────────────── */@media (max-width: 600px) {.header-inner { flex-direction: column; gap: 10px; text-align: center; }nav a { margin: 0 8px; }.hero { padding: 40px 16px 36px; }.input-card { padding: 20px 16px; }.input-grid { grid-template-columns: 1fr 1fr; }}</style>
+
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────── -->
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">🌾</div>
+      <div>
+        <div class="logo-text">Agro<span>Sense</span></div>
+        <div class="tagline">Weather-Based Crop Advisory</div>
+      </div>
+    </div>
+    <nav>
+      <a href="#advisory">Advisory</a>
+      <a href="#tips">Tips</a>
+      <a href="#about">About</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ── Hero ────────────────────────────────────────────── -->
+
+<section class="hero">
+  <h1>Grow smarter with <em>weather-aware</em> crop guidance</h1>
+  <p>Enter today's field conditions and get instant, season-calibrated advice for the right crops and care actions.</p>
+
+  <div class="input-card">
+    <div class="input-grid">
+      <div class="field">
+        <label>Temperature (°C)</label>
+        <input type="number" id="inp-temp" placeholder="e.g. 28" min="-10" max="55">
+      </div>
+      <div class="field">
+        <label>Humidity (%)</label>
+        <input type="number" id="inp-humidity" placeholder="e.g. 65" min="0" max="100">
+      </div>
+      <div class="field">
+        <label>Rainfall (mm)</label>
+        <input type="number" id="inp-rain" placeholder="e.g. 12" min="0" max="500">
+      </div>
+      <div class="field">
+        <label>Wind Speed (km/h)</label>
+        <input type="number" id="inp-wind" placeholder="e.g. 15" min="0" max="200">
+      </div>
+      <div class="field">
+        <label>Season</label>
+        <select id="inp-season">
+          <option value="">Select</option>
+          <option value="kharif">Kharif (Jun–Oct)</option>
+          <option value="rabi">Rabi (Nov–Mar)</option>
+          <option value="zaid">Zaid (Apr–Jun)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Soil Type</label>
+        <select id="inp-soil">
+          <option value="">Select</option>
+          <option value="alluvial">Alluvial</option>
+          <option value="black">Black (Regur)</option>
+          <option value="red">Red & Laterite</option>
+          <option value="sandy">Sandy / Loam</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="generateAdvisory()">🔍 Get Crop Advisory</button>
+  </div>
+</section>
+
+<!-- ── Main ─────────────────────────────────────────────── -->
+
+<main>
+  <!-- Weather summary strip -->
+  <div id="weather-strip"></div>
+
+  <!-- Alert banner -->
+
+  <div id="alert-container"></div>
+
+  <!-- Advisory cards -->
+
+  <section id="advisory-section">
+    <div class="section-eyebrow">Personalised Recommendations</div>
+    <h2 class="section-title" id="advisory-heading">Crop Advisory</h2>
+    <div class="advisory-grid" id="advisory-grid"></div>
+  </section>
+
+  <!-- Empty state -->
+
+  <div id="empty-state">
+    <div class="es-icon">🌱</div>
+    <p>Fill in your field conditions above and tap <strong>Get Crop Advisory</strong> to see tailored recommendations.</p>
+  </div>
+
+  <!-- Tips strip -->
+
+  <section id="tips" style="margin-top:48px;">
+    <div class="section-eyebrow">General Knowledge</div>
+    <h2 class="section-title">Field-tested tips</h2>
+    <div class="tip-strip">
+      <div class="tip-tile">
+        <div class="tip-icon">💧</div>
+        <div>
+          <h4>Irrigation Timing</h4>
+          <p>Water in the early morning or evening to cut evaporation loss by up to 30%.</p>
+        </div>
+      </div>
+      <div class="tip-tile">
+        <div class="tip-icon">🌡️</div>
+        <div>
+          <h4>Heat Stress Watch</h4>
+          <p>Above 38 °C, shield young seedlings with shade nets and increase watering frequency.</p>
+        </div>
+      </div>
+      <div class="tip-tile">
+        <div class="tip-icon">🍂</div>
+        <div>
+          <h4>Post-Rain Soil Care</h4>
+          <p>After heavy rain, loosen topsoil gently to prevent crusting and help root respiration.</p>
+        </div>
+      </div>
+      <div class="tip-tile">
+        <div class="tip-icon">🐛</div>
+        <div>
+          <h4>Humidity & Pest Pressure</h4>
+          <p>High humidity (>80 %) increases fungal risk. Apply neem-based sprays as a preventive.</p>
+        </div>
+      </div>
+      <div class="tip-tile">
+        <div class="tip-icon">🌬️</div>
+        <div>
+          <h4>Windy Conditions</h4>
+          <p>Winds above 30 km/h can lodge tall crops. Stake plants and delay spraying to avoid drift.</p>
+        </div>
+      </div>
+      <div class="tip-tile">
+        <div class="tip-icon">📅</div>
+        <div>
+          <h4>Crop Rotation Benefit</h4>
+          <p>Rotating legumes with cereals restores soil nitrogen and breaks pest-disease cycles naturally.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer id="about">
+  Designed for farmers of India &nbsp;·&nbsp; <strong>AgroSense</strong> &nbsp;·&nbsp; Advisory based on agronomic knowledge — always consult a local Krishi Vigyan Kendra for certified guidance.
+</footer>
+
+<script>
+/* ── Crop Knowledge Base ──────────────────────────────── */
+const cropDB = [
+  {
+    name: "Rice (Paddy)",
+    icon: "🌾",
+    color: "#e8f5e9",
+    accent: "#3A7D44",
+    tempRange: [22, 35],
+    humidityRange: [60, 95],
+    rainRange: [10, 200],
+    seasons: ["kharif"],
+    soils: ["alluvial", "black"],
+    tips: {
+      high_temp: "Increase irrigation frequency; avoid water stress at panicle emergence.",
+      low_temp: "Use cold-tolerant varieties like IR-36; delay transplanting.",
+      high_humidity: "Monitor for blast and blight disease; apply carbendazim preventively.",
+      low_humidity: "Ensure standing water of 5 cm in fields to maintain humidity.",
+      high_rain: "Check bund integrity to prevent field flooding; drain excess water.",
+      low_rain: "Use supplemental irrigation; consider SRI method to save water.",
+      high_wind: "Wind can lodge tall varieties — plant in rows perpendicular to wind.",
+      normal: "Maintain 2–5 cm of standing water; apply basal dose of NPK before transplanting.",
+    }
+  },
+  {
+    name: "Wheat",
+    icon: "🌿",
+    color: "#fff8e1",
+    accent: "#D4A84B",
+    tempRange: [10, 25],
+    humidityRange: [40, 70],
+    rainRange: [0, 40],
+    seasons: ["rabi"],
+    soils: ["alluvial", "black"],
+    tips: {
+      high_temp: "High temperature can cause premature ripening — irrigate and harvest early.",
+      low_temp: "Frost risk below 0 °C; use protective covers on seedlings.",
+      high_humidity: "Rust and powdery mildew risk — apply mancozeb at first sign.",
+      low_humidity: "Adequate moisture is needed at crown root initiation stage.",
+      high_rain: "Ensure drainage; waterlogging is harmful during vegetative stage.",
+      low_rain: "Critical irrigation at CRI, tillering, and grain filling stages.",
+      high_wind: "Wind damage at maturity — arrange timely harvesting.",
+      normal: "Sow at 100–125 kg/ha seed rate; apply adequate phosphorus for root development.",
+    }
+  },
+  {
+    name: "Cotton",
+    icon: "🌸",
+    color: "#fce4ec",
+    accent: "#c2185b",
+    tempRange: [21, 38],
+    humidityRange: [50, 80],
+    rainRange: [5, 50],
+    seasons: ["kharif"],
+    soils: ["black", "alluvial"],
+    tips: {
+      high_temp: "Shade young bolls with mulching; maintain soil moisture to reduce heat stress.",
+      low_temp: "Temperatures below 15 °C hamper germination — delay sowing.",
+      high_humidity: "Boll rot risk increases; apply copper-based fungicide.",
+      low_humidity: "Irrigate at squaring and boll formation stages.",
+      high_rain: "Excess rain causes boll dropping; ensure field drainage.",
+      low_rain: "Drip irrigation is highly effective for cotton.",
+      high_wind: "Wind can spread pink bollworm moths — install pheromone traps.",
+      normal: "Plant at 90×60 cm spacing; apply NPK 90:45:45 kg/ha in split doses.",
+    }
+  },
+  {
+    name: "Maize (Corn)",
+    icon: "🌽",
+    color: "#fffde7",
+    accent: "#F5C518",
+    tempRange: [18, 35],
+    humidityRange: [50, 80],
+    rainRange: [5, 80],
+    seasons: ["kharif", "zaid"],
+    soils: ["alluvial", "red", "sandy"],
+    tips: {
+      high_temp: "Critical at silking stage — irrigate daily to prevent pollen desiccation.",
+      low_temp: "Frost below 0 °C kills seedlings; use plastic mulch to warm the soil.",
+      high_humidity: "Fall Armyworm and downy mildew pressure rises — scout weekly.",
+      low_humidity: "Ensure adequate moisture at the tasseling stage.",
+      high_rain: "Excess rain leaches nitrogen — apply top-dressing post rain.",
+      low_rain: "Maize needs regular irrigation every 7–10 days.",
+      high_wind: "Windbreaks or lodging-resistant hybrids recommended.",
+      normal: "Sow at 20 cm spacing in rows 60 cm apart; apply urea in three splits.",
+    }
+  },
+  {
+    name: "Tomato",
+    icon: "🍅",
+    color: "#fbe9e7",
+    accent: "#E8612C",
+    tempRange: [18, 30],
+    humidityRange: [45, 70],
+    rainRange: [0, 30],
+    seasons: ["rabi", "zaid"],
+    soils: ["alluvial", "red", "sandy"],
+    tips: {
+      high_temp: "Fruit setting fails above 35 °C; use shade nets and mist irrigation.",
+      low_temp: "Cold nights below 10 °C cause chilling injury — use row covers.",
+      high_humidity: "Early blight and Septoria risk — apply chlorothalonil spray.",
+      low_humidity: "Drip irrigation to keep soil moist but leaves dry.",
+      high_rain: "Avoid overhead irrigation; stake plants to improve air circulation.",
+      low_rain: "Consistent moisture prevents blossom-end rot.",
+      high_wind: "Stake all plants firmly; protect from strong winds during flowering.",
+      normal: "Transplant 30-day-old seedlings at 60×45 cm spacing; mulch with dry straw.",
+    }
+  },
+  {
+    name: "Groundnut",
+    icon: "🥜",
+    color: "#fdf6ec",
+    accent: "#A0522D",
+    tempRange: [24, 35],
+    humidityRange: [50, 75],
+    rainRange: [5, 60],
+    seasons: ["kharif", "zaid"],
+    soils: ["red", "sandy", "alluvial"],
+    tips: {
+      high_temp: "Mulch the pegging zone to keep soil cool and retain moisture.",
+      low_temp: "Temperatures below 18 °C slow pod filling — delay planting.",
+      high_humidity: "Leaf spot and stem rot — spray mancozeb 0.25% at 30 DAS.",
+      low_humidity: "Critical irrigation at pegging and pod filling stages.",
+      high_rain: "Prevent waterlogging; aflatoxin risk increases in wet-harvested pods.",
+      low_rain: "Provide one protective irrigation at pegging stage.",
+      high_wind: "Wind erosion in sandy soils — ensure good crop stand.",
+      normal: "Sow at 30×10 cm; apply gypsum at 300 kg/ha at pegging for pod quality.",
+    }
+  },
+];
+ 
+/* ── Main Advisory Function ───────────────────────────── */
+function generateAdvisory() {
+  const temp     = parseFloat(document.getElementById('inp-temp').value);
+  const humidity = parseFloat(document.getElementById('inp-humidity').value);
+  const rain     = parseFloat(document.getElementById('inp-rain').value);
+  const wind     = parseFloat(document.getElementById('inp-wind').value);
+  const season   = document.getElementById('inp-season').value;
+  const soil     = document.getElementById('inp-soil').value;
+ 
+  if (isNaN(temp) || isNaN(humidity) || isNaN(rain) || isNaN(wind) || !season || !soil) {
+    shakeCard();
+    return;
+  }
+ 
+  // Show weather strip
+  renderWeatherStrip(temp, humidity, rain, wind);
+ 
+  // Generate alert
+  renderAlert(temp, humidity, rain, wind);
+ 
+  // Score and rank crops
+  const scored = cropDB.map(crop => ({
+    crop,
+    score: scoreCrop(crop, temp, humidity, rain, season, soil),
+    advice: pickAdvice(crop, temp, humidity, rain, wind),
+  }));
+  scored.sort((a, b) => b.score - a.score);
+  const top = scored.slice(0, 4);
+ 
+  // Render
+  renderAdvisory(top, temp, season, soil);
+ 
+  document.getElementById('empty-state').style.display = 'none';
+  const strip = document.getElementById('weather-strip');
+  const sec   = document.getElementById('advisory-section');
+  strip.style.display = 'grid';
+  sec.style.display   = 'block';
+ 
+  sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+ 
+/* ── Scoring ──────────────────────────────────────────── */
+function scoreCrop(crop, temp, humidity, rain, season, soil) {
+  let score = 100;
+ 
+  // Temperature score (Gaussian-like fall-off)
+  const mid = (crop.tempRange[0] + crop.tempRange[1]) / 2;
+  const range = crop.tempRange[1] - crop.tempRange[0];
+  const tempDist = Math.max(0, Math.abs(temp - mid) - range / 2);
+  score -= tempDist * 4;
+ 
+  // Humidity score
+  if (humidity < crop.humidityRange[0]) score -= (crop.humidityRange[0] - humidity) * 0.8;
+  if (humidity > crop.humidityRange[1]) score -= (humidity - crop.humidityRange[1]) * 0.8;
+ 
+  // Rain score
+  if (rain < crop.rainRange[0]) score -= (crop.rainRange[0] - rain) * 1.2;
+  if (rain > crop.rainRange[1]) score -= (rain - crop.rainRange[1]) * 0.5;
+ 
+  // Season bonus
+  if (crop.seasons.includes(season)) score += 20;
+  else score -= 30;
+ 
+  // Soil bonus
+  if (crop.soils.includes(soil)) score += 15;
+  else score -= 15;
+ 
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+ 
+/* ── Pick Advice ──────────────────────────────────────── */
+function pickAdvice(crop, temp, humidity, rain, wind) {
+  const points = [crop.tips.normal];
+  if (temp > crop.tempRange[1])   points.push(crop.tips.high_temp);
+  if (temp < crop.tempRange[0])   points.push(crop.tips.low_temp);
+  if (humidity > crop.humidityRange[1]) points.push(crop.tips.high_humidity);
+  if (humidity < crop.humidityRange[0]) points.push(crop.tips.low_humidity);
+  if (rain > crop.rainRange[1])   points.push(crop.tips.high_rain);
+  if (rain < crop.rainRange[0] && rain < 5) points.push(crop.tips.low_rain);
+  if (wind > 30)                  points.push(crop.tips.high_wind);
+  return [...new Set(points)].slice(0, 4);
+}
+ 
+/* ── Render Weather Strip ─────────────────────────────── */
+function renderWeatherStrip(temp, humidity, rain, wind) {
+  const strip = document.getElementById('weather-strip');
+  const feelsLike = (temp + (humidity / 100) * 2).toFixed(1);
+  const tiles = [
+    { icon: temp > 35 ? '🥵' : temp < 15 ? '🥶' : '🌡️', val: temp + '°C', label: 'Temperature' },
+    { icon: '💧', val: humidity + '%', label: 'Humidity' },
+    { icon: '🌧️', val: rain + ' mm', label: 'Rainfall' },
+    { icon: '💨', val: wind + ' km/h', label: 'Wind Speed' },
+    { icon: '🌡️', val: feelsLike + '°C', label: 'Feels Like' },
+    { icon: humidity > 80 ? '☁️' : rain > 0 ? '🌦️' : '☀️', val: getCondition(temp, humidity, rain), label: 'Condition' },
+  ];
+  strip.innerHTML = tiles.map(t => `
+    <div class="weather-tile">
+      <div class="w-icon">${t.icon}</div>
+      <div class="w-val">${t.val}</div>
+      <div class="w-label">${t.label}</div>
+    </div>
+  `).join('');
+}
+ 
+function getCondition(temp, humidity, rain) {
+  if (rain > 50) return 'Heavy Rain';
+  if (rain > 10) return 'Rainy';
+  if (humidity > 80) return 'Cloudy';
+  if (temp > 38) return 'Very Hot';
+  if (temp > 30) return 'Warm';
+  if (temp < 15) return 'Cold';
+  return 'Pleasant';
+}
+ 
+/* ── Render Alert ─────────────────────────────────────── */
+function renderAlert(temp, humidity, rain, wind) {
+  const c = document.getElementById('alert-container');
+  let html = '';
+  if (temp > 40) {
+    html += alert('danger','🚨','Extreme Heat Warning','Temperature above 40 °C. Suspend field work during 11 AM – 4 PM. Protect nurseries and irrigation channels immediately.');
+  } else if (rain > 100) {
+    html += alert('danger','🌊','Flood Risk Alert','Rainfall is very high. Inspect field bunds, clear drainage channels, and move stored produce to higher ground.');
+  } else if (humidity > 85) {
+    html += alert('warn','⚠️','High Disease Pressure','Humidity above 85% significantly increases fungal and bacterial disease risk. Scout fields daily and apply preventive sprays.');
+  } else if (wind > 45) {
+    html += alert('warn','💨','Strong Wind Advisory','Wind speed above 45 km/h can lodge and damage crops. Avoid spraying and stake tall plants.');
+  } else {
+    html += alert('good','✅','Conditions Suitable','Weather parameters are within acceptable ranges for most crops. Proceed with planned field activities.');
+  }
+  c.innerHTML = html;
+}
+ 
+function alert(type, icon, title, msg) {
+  return `<div class="alert-banner ${type}">
+    <span class="alert-icon">${icon}</span>
+    <div><strong>${title}:</strong> ${msg}</div>
+  </div>`;
+}
+ 
+/* ── Render Advisory Cards ────────────────────────────── */
+function renderAdvisory(top, temp, season, soil) {
+  const heading = document.getElementById('advisory-heading');
+  heading.textContent = `Recommendations for ${season.charAt(0).toUpperCase()+season.slice(1)} season on ${soil} soil`;
+ 
+  const grid = document.getElementById('advisory-grid');
+  grid.innerHTML = top.map(({ crop, score, advice }) => {
+    const pct = score;
+    const barColor = pct >= 70 ? '#3A7D44' : pct >= 45 ? '#D4A84B' : '#E8612C';
+    const pointsHtml = advice.map(p => `
+      <li>
+        <span class="dot" style="background:${barColor}"></span>
+        <span>${p}</span>
+      </li>
+    `).join('');
+    return `
+      <div class="advisory-card">
+        <div class="card-header">
+          <div class="crop-badge" style="background:${crop.color}">${crop.icon}</div>
+          <div style="flex:1;min-width:0;">
+            <h3>${crop.name}</h3>
+            <div class="suitability-bar-wrap">
+              <div class="suitability-bar">
+                <div class="suitability-fill" style="width:0%;background:${barColor}" data-target="${pct}"></div>
+              </div>
+              <span class="suit-val" style="color:${barColor}">${pct}%</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <ul class="advisory-points">${pointsHtml}</ul>
+        </div>
+      </div>
+    `;
+  }).join('');
+ 
+  // Animate bars
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.suitability-fill').forEach(bar => {
+      bar.style.width = bar.dataset.target + '%';
+    });
+  });
+}
+ 
+/* ── Shake on validation fail ─────────────────────────── */
+function shakeCard() {
+  const card = document.querySelector('.input-card');
+  card.style.animation = 'none';
+  card.style.outline = '2px solid #E8612C';
+  setTimeout(() => { card.style.outline = 'none'; }, 1200);
+}
+</script>
+
+</body>
+</html>node -v
