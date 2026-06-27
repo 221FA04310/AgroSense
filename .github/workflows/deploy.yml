@@ -9,8 +9,10 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
+
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -36,4 +38,6 @@ jobs:
 
       - name: Deploy to Cloudflare Pages
         run: |
-          wrangler pages deploy . --project-name=agrosense --branch=main --commit-dirty=true --account-id "$CLOUDFLARE_ACCOUNT_ID" --api-token "$CLOUDFLARE_API_TOKEN"
+          wrangler pages deploy . \
+            --project-name=agrosense \
+            --branch=main
