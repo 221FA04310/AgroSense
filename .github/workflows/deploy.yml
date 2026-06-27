@@ -12,7 +12,6 @@ jobs:
     env:
       ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
 
     permissions:
       contents: read
@@ -22,14 +21,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate Cloudflare secrets
+      - name: Validate Cloudflare token
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "Missing CLOUDFLARE_API_TOKEN"
-            exit 1
-          fi
-          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
-            echo "Missing CLOUDFLARE_ACCOUNT_ID"
             exit 1
           fi
 
@@ -37,7 +32,7 @@ jobs:
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ env.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
+          accountId: 87808e8d0576e3f30b847f025e617ed9
           projectName: agrosense
           directory: .
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
